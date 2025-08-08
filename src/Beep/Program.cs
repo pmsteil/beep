@@ -8,8 +8,19 @@ using System.Threading;
 
 namespace BeepCli
 {
+    /// <summary>
+    /// Minimal cross-platform CLI that plays short completion sounds.
+    /// On macOS it uses the built-in 'afplay' utility with system sound files.
+    /// Windows uses System.Media when running on Windows. Linux currently
+    /// falls back to the terminal bell. Designed for use at the end of
+    /// long-running shell commands (e.g., `make build && beep`).
+    /// </summary>
     public static class Program
     {
+        /// <summary>
+        /// Application entry point. Parses arguments and attempts playback.
+        /// Returns 0 on success or when showing help, and 2 on argument errors.
+        /// </summary>
         public static int Main(string[] args)
         {
             ParsedOptions options;
@@ -48,6 +59,11 @@ namespace BeepCli
             return 0;
         }
 
+        /// <summary>
+        /// Parses command-line arguments into a strongly-typed options object.
+        /// Supports positional sounds, repeatable --sound flags, volume,
+        /// repeat, gaps, and wait/blocking behavior.
+        /// </summary>
         private static ParsedOptions ParseArgs(string[] args)
         {
             var options = new ParsedOptions
@@ -142,6 +158,10 @@ namespace BeepCli
             return options;
         }
 
+        /// <summary>
+        /// Ensures the option at the provided index has a subsequent value;
+        /// throws an <see cref="ArgumentException"/> if not.
+        /// </summary>
         private static void EnsureHasValue(string[] args, int index, string name)
         {
             if (index + 1 >= args.Length)
@@ -150,6 +170,10 @@ namespace BeepCli
             }
         }
 
+        /// <summary>
+        /// Selects the platform backend and attempts to play audio according to options.
+        /// Returns true if a backend successfully produced audio.
+        /// </summary>
         private static bool TryPlaySound(ParsedOptions options)
         {
             try
@@ -178,6 +202,11 @@ namespace BeepCli
             return false;
         }
 
+        /// <summary>
+        /// macOS backend that resolves aliases to files in /System/Library/Sounds
+        /// and uses 'afplay' to play them. Supports non-blocking single-play,
+        /// sequence repeats, inter-sound gaps, and per-sound duration limit.
+        /// </summary>
         private static bool TryPlayOnMac(ParsedOptions options)
         {
             var macAliases = GetMacSoundAliases();
@@ -242,6 +271,9 @@ namespace BeepCli
         }
 
         #if !DISABLE_WINDOWS_SOUND
+        /// <summary>
+        /// Windows backend using System.Media.SystemSounds when running on Windows.
+        /// </summary>
         private static bool TryPlayOnWindows(ParsedOptions options)
         {
             try
@@ -263,6 +295,10 @@ namespace BeepCli
         }
         #endif
 
+        /// <summary>
+        /// Starts a child process with the provided arguments and returns immediately.
+        /// Returns false if the process could not be started.
+        /// </summary>
         private static bool StartProcess(string fileName, IReadOnlyList<string> arguments)
         {
             try
@@ -292,6 +328,10 @@ namespace BeepCli
             }
         }
 
+        /// <summary>
+        /// Starts a child process and waits for it to exit; returns true if the
+        /// process reports ExitCode 0.
+        /// </summary>
         private static bool RunProcess(string fileName, IReadOnlyList<string> arguments)
         {
             try
@@ -328,6 +368,10 @@ namespace BeepCli
             }
         }
 
+        /// <summary>
+        /// Builds an argument list for 'afplay' including volume and optional
+        /// time limit (in seconds). When durationMs is 0 the full sound plays.
+        /// </summary>
         private static List<string> BuildAfplayArgs(string filePath, double volumeScalar, int durationMs)
         {
             var args = new List<string>
@@ -347,6 +391,10 @@ namespace BeepCli
             return args;
         }
 
+        /// <summary>
+        /// Returns a case-insensitive map of sound aliases to macOS system
+        /// sound file paths.
+        /// </summary>
         private static Dictionary<string, string> GetMacSoundAliases()
         {
             return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -363,6 +411,9 @@ namespace BeepCli
             };
         }
 
+        /// <summary>
+        /// Prints CLI usage details to standard output.
+        /// </summary>
         private static void PrintUsage()
         {
             Console.WriteLine(@"beep - play a pleasant completion sound
@@ -386,15 +437,52 @@ Notes:
   - Other OSes may fall back to terminal bell in this initial version.");
         }
 
+        /// <summary>
+        /// Options parsed from the command line that control playback behavior.
+        /// </summary>
         private sealed class ParsedOptions
         {
+            /// <summary>
+            /// List of sounds to play in order. Each entry may be a known alias
+            /// (e.g., "glass") or a file path to an audio file supported by the OS.
+            /// </summary>
             public List<string> Sounds { get; set; } = new List<string>();
+
+            /// <summary>
+            /// Volume percent 0-100. On macOS, mapped to 'afplay -v' scalar (0.0-1.0).
+            /// </summary>
             public int VolumePercent { get; set; }
+
+            /// <summary>
+            /// Number of times to repeat the entire sequence of sounds.
+            /// </summary>
             public int Repeat { get; set; }
+
+            /// <summary>
+            /// When true, prints usage and exits.
+            /// </summary>
             public bool ShowHelp { get; set; }
+
+            /// <summary>
+            /// When true, the process blocks until playback finishes. When false
+            /// and playing a single sound, the process may return immediately.
+            /// </summary>
             public bool Wait { get; set; }
+
+            /// <summary>
+            /// Milliseconds between distinct sounds within a single sequence.
+            /// </summary>
             public int GapMs { get; set; }
+
+            /// <summary>
+            /// Milliseconds between repeated sequences.
+            /// </summary>
             public int SequenceGapMs { get; set; }
+
+            /// <summary>
+            /// Maximum milliseconds to play for each individual sound. 0 means
+            /// play full length.
+            /// </summary>
             public int DurationMs { get; set; }
         }
     }
