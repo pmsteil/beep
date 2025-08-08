@@ -1,0 +1,36 @@
+# Build results
+bin/
+obj/
+
+# NuGet packages
+*.nupkg
+*.snupkg
+packages/
+
+# Users-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Visual Studio Code
+.vscode/
+
+# Rider
+.idea/
+
+# Logs
+*.log
+
+# Dotnet tools
+.store/
+.tools/
+.nuget/
+
+# Publish outputs
+src/**/publish/
+
+# Local nupkg staging
+nupkgs/
+
+
